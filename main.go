@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var interval *int = flag.Int("interval", 1000, "millisecond to wait output")
+var interval *time.Duration = flag.Duration("interval", 1000 * time.Millisecond, "duration to wait output")
 var debug *bool = flag.Bool("debug", false, "debug mode")
 
 func main() {
@@ -51,7 +51,7 @@ func inputStream(out chan string, done chan int) {
 
 func background(input chan string, execCmd string, graceful chan int, willShutdown chan int) {
 	buffer := make([]string, 0)
-	timer := time.Tick(time.Duration(*interval) * time.Millisecond)
+	timer := time.Tick(*interval)
 	flush := func() {
 		tmp := strings.Join(buffer, "\n")
 		if tmp != "" {
