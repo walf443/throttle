@@ -4,20 +4,27 @@ import (
 	"flag"
 	"bufio"
 	"os"
+	"os/exec"
 	"log"
 	"time"
 	"fmt"
+	"strings"
 )
 
 var interval *int = flag.Int("interval", 1000, "millisecond to wait output")
 
 func main() {
 	flag.Parse()
+	args := flag.Args()
+	execCommand := ""
+	if len(args) == 1 {
+		execCommand = args[0]
+	}
 	graceful := make(chan int)
 	done := make(chan int)
 	out := make(chan string)
 	go inputStream(out, done)
-	go background(out, graceful)
+	go background(out, graceful, execCommand)
 	for {
 		select {
 		case <-graceful:
@@ -39,7 +46,7 @@ func inputStream(out chan string, done chan int) {
 	done <- 1
 }
 
-func background(input chan string, graceful chan int) {
+func background(input chan string, graceful chan int, execCommand string) {
 	buffer := make([]string, 0)
 	timer := time.Tick(time.Duration(*interval) * time.Millisecond)
 	for {
@@ -47,10 +54,21 @@ func background(input chan string, graceful chan int) {
 		case line := <-input:
 			buffer = append(buffer, line)
 		case <-timer:
-			for _, buf := range(buffer) {
-				fmt.Println(buf)
+			tmp := strings.Join(buffer, "\n")
+			if tmp != "" {
+				if execCommand == "" {
+					fmt.Println(tmp)
+				} else {
+					cmd := fmt.Sprintf(execCommand, tmp)
+					fmt.Printf("\"%s\"\n", cmd)
+					out, err := exec.Command("/bin/bash", "-c", cmd).Output()
+					if err != nil {
+						log.Fatal(err)
+					}
+					fmt.Println(string(out))
+				}
+				buffer = buffer[:0]
 			}
-			buffer = buffer[:0]
 			graceful <- 1
 		}
 	}
