@@ -7,7 +7,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -29,9 +31,21 @@ func main() {
 	willShutdown := make(chan int)
 	go background(out, execCommand, intervalCh, willShutdown)
 
+	signalCh := make(chan os.Signal)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP)
+
 	for {
 		select {
 		case <-intervalCh:
+		case sig := <-signalCh:
+			switch sig {
+			case syscall.SIGHUP:
+				willShutdown <- 1
+			default:
+				willShutdown <- 1
+				<-intervalCh
+				return
+			}
 		case <-done:
 			willShutdown <- 1
 			<-intervalCh
