@@ -23,13 +23,15 @@ func main() {
 	}
 	graceful := make(chan int)
 	done := make(chan int)
+	willShutdown := make(chan int)
 	out := make(chan string)
 	go inputStream(out, done)
-	go background(out, graceful, execCommand)
+	go background(out, execCommand, graceful, willShutdown)
 	for {
 		select {
 		case <-graceful:
 		case <-done:
+			willShutdown <-1
 			<-graceful
 			return
 		}
@@ -47,32 +49,37 @@ func inputStream(out chan string, done chan int) {
 	done <- 1
 }
 
-func background(input chan string, graceful chan int, execCommand string) {
+func background(input chan string, execCmd string, graceful chan int, willShutdown chan int) {
 	buffer := make([]string, 0)
 	timer := time.Tick(time.Duration(*interval) * time.Millisecond)
+	flush := func() {
+		tmp := strings.Join(buffer, "\n")
+		if tmp != "" {
+			if execCmd == "" {
+				fmt.Println(tmp)
+			} else {
+				cmd := fmt.Sprintf(execCmd, tmp)
+				if *debug {
+					fmt.Printf("[debug] execute \"%s\"\n", cmd)
+				}
+				out, err := exec.Command("/bin/bash", "-c", cmd).Output()
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println(string(out))
+			}
+			buffer = buffer[:0]
+		}
+		graceful <- 1
+	}
 	for {
 		select {
 		case line := <-input:
 			buffer = append(buffer, line)
+		case <-willShutdown:
+			flush()
 		case <-timer:
-			tmp := strings.Join(buffer, "\n")
-			if tmp != "" {
-				if execCommand == "" {
-					fmt.Println(tmp)
-				} else {
-					cmd := fmt.Sprintf(execCommand, tmp)
-					if *debug {
-						fmt.Printf("[debug] execute \"%s\"\n", cmd)
-					}
-					out, err := exec.Command("/bin/bash", "-c", cmd).Output()
-					if err != nil {
-						log.Fatal(err)
-					}
-					fmt.Println(string(out))
-				}
-				buffer = buffer[:0]
-			}
-			graceful <- 1
+			flush()
 		}
 	}
 }
