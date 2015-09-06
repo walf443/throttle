@@ -13,18 +13,33 @@ var interval *int = flag.Int("interval", 1000, "millisecond to wait output")
 
 func main() {
 	flag.Parse()
+	graceful := make(chan int)
+	done := make(chan int)
+	out := make(chan string)
+	go inputStream(out, done)
+	go background(out, graceful)
+	for {
+		select {
+		case <-graceful:
+		case <-done:
+			<-graceful
+			return
+		}
+	}
+}
+
+func inputStream(out chan string, done chan int) {
 	scanner := bufio.NewScanner(os.Stdin)
-	ch := make(chan string)
-	go background(ch)
 	for scanner.Scan() {
-		ch <- scanner.Text()
+		out <- scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+	done <- 1
 }
 
-func background(input chan string) {
+func background(input chan string, graceful chan int) {
 	buffer := make([]string, 0)
 	timer := time.Tick(time.Duration(*interval) * time.Millisecond)
 	for {
@@ -36,6 +51,7 @@ func background(input chan string) {
 				fmt.Println(buf)
 			}
 			buffer = buffer[:0]
+			graceful <- 1
 		}
 	}
 }
