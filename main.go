@@ -9,6 +9,7 @@ import (
 	"fmt"
 )
 
+var interval *int = flag.Int("interval", 1000, "millisecond to wait output")
 
 func main() {
 	flag.Parse()
@@ -25,7 +26,7 @@ func main() {
 
 func background(input chan string) {
 	buffer := make([]string, 0)
-	timer := time.Tick(200 * time.Millisecond)
+	timer := time.Tick(time.Duration(*interval) * time.Millisecond)
 	for {
 		select {
 		case line := <-input:
