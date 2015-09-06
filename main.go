@@ -56,22 +56,25 @@ func background(input <-chan string, execCmd string, intervalCh chan<- int, will
 	timer := time.Tick(*interval)
 	flush := func() {
 		tmp := strings.Join(buffer, "\n")
-		if tmp != "" {
-			if execCmd == "" {
-				fmt.Println(tmp)
-			} else {
-				cmd := fmt.Sprintf(execCmd, tmp)
-				if *debug {
-					fmt.Printf("[debug] execute \"%s\"\n", cmd)
-				}
-				out, err := exec.Command("/bin/bash", "-c", cmd).Output()
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println(string(out))
-			}
-			buffer = buffer[:0]
+		if tmp == "" {
+			intervalCh <- 1
+			return
 		}
+
+		if execCmd == "" {
+			fmt.Println(tmp)
+		} else {
+			cmd := fmt.Sprintf(execCmd, tmp)
+			if *debug {
+				fmt.Printf("[debug] execute \"%s\"\n", cmd)
+			}
+			out, err := exec.Command("/bin/bash", "-c", cmd).Output()
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(out))
+		}
+		buffer = buffer[:0]
 		intervalCh <- 1
 	}
 	for {
