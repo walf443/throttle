@@ -21,24 +21,26 @@ func main() {
 	if len(args) == 1 {
 		execCommand = args[0]
 	}
-	graceful := make(chan int)
 	done := make(chan int)
-	willShutdown := make(chan int)
 	out := make(chan string)
 	go inputStream(out, done)
-	go background(out, execCommand, graceful, willShutdown)
+
+	intervalCh := make(chan int)
+	willShutdown := make(chan int)
+	go background(out, execCommand, intervalCh, willShutdown)
+
 	for {
 		select {
-		case <-graceful:
+		case <-intervalCh:
 		case <-done:
 			willShutdown <- 1
-			<-graceful
+			<-intervalCh
 			return
 		}
 	}
 }
 
-func inputStream(out chan string, done chan int) {
+func inputStream(out chan<- string, done chan<- int) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		out <- scanner.Text()
@@ -49,7 +51,7 @@ func inputStream(out chan string, done chan int) {
 	done <- 1
 }
 
-func background(input chan string, execCmd string, graceful chan int, willShutdown chan int) {
+func background(input <-chan string, execCmd string, intervalCh chan<- int, willShutdown <-chan int) {
 	buffer := make([]string, 0)
 	timer := time.Tick(*interval)
 	flush := func() {
@@ -70,7 +72,7 @@ func background(input chan string, execCmd string, graceful chan int, willShutdo
 			}
 			buffer = buffer[:0]
 		}
-		graceful <- 1
+		intervalCh <- 1
 	}
 	for {
 		select {
