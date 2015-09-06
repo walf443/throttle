@@ -11,6 +11,8 @@ throttle is a cli tool for throttle stdout on interval
 
 if command exist, exec command on each interval.
 
+%%DATA%% replaced to output string.
+
 # LICENSE
 
 Copyright (c) 2015 Keiji Yoshimi

@@ -78,7 +78,7 @@ func background(input <-chan string, execCmd string, intervalCh chan<- int, will
 		if execCmd == "" {
 			fmt.Println(tmp)
 		} else {
-			cmd := fmt.Sprintf(execCmd, tmp)
+			cmd := strings.Replace(execCmd, "%%DATA%%", tmp, -1)
 			if *debug {
 				fmt.Printf("[debug] execute \"%s\"\n", cmd)
 			}
