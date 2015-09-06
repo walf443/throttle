@@ -12,6 +12,7 @@ import (
 )
 
 var interval *int = flag.Int("interval", 1000, "millisecond to wait output")
+var debug *bool = flag.Bool("debug", false, "debug mode")
 
 func main() {
 	flag.Parse()
@@ -60,7 +61,9 @@ func background(input chan string, graceful chan int, execCommand string) {
 					fmt.Println(tmp)
 				} else {
 					cmd := fmt.Sprintf(execCommand, tmp)
-					fmt.Printf("\"%s\"\n", cmd)
+					if *debug {
+						fmt.Printf("[debug] execute \"%s\"\n", cmd)
+					}
 					out, err := exec.Command("/bin/bash", "-c", cmd).Output()
 					if err != nil {
 						log.Fatal(err)
