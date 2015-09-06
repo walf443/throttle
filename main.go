@@ -1,17 +1,17 @@
 package main
 
 import (
-	"flag"
 	"bufio"
+	"flag"
+	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"log"
-	"time"
-	"fmt"
 	"strings"
+	"time"
 )
 
-var interval *time.Duration = flag.Duration("interval", 1000 * time.Millisecond, "duration to wait output")
+var interval *time.Duration = flag.Duration("interval", 1000*time.Millisecond, "duration to wait output")
 var debug *bool = flag.Bool("debug", false, "debug mode")
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 		select {
 		case <-graceful:
 		case <-done:
-			willShutdown <-1
+			willShutdown <- 1
 			<-graceful
 			return
 		}
